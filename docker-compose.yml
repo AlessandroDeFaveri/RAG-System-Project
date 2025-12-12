@@ -1,0 +1,25 @@
+services:
+  # Vector Database - Qdrant
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"  # API REST
+      - "6334:6334"  # gRPC
+    volumes:
+      - ./qdrant_storage:/qdrant/storage # persistenza dei dati
+    restart: unless-stopped
+
+  # LLM - Ollama
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+
+volumes:
+  ollama_data:
