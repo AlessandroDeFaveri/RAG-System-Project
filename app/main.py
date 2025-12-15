@@ -38,24 +38,21 @@ def rag_query(question: str, model, qdrant_client, top_k: int = TOP_K):
     
     print(f"      Trovati {len(chunks)} chunk (score max: {chunks[0]['score']:.4f})")
     
-    # Mostra le fonti
-    print("\n[2/3] Fonti utilizzate:")
-    for i, chunk in enumerate(chunks, 1):
-        print(f"      {i}. {chunk['source']} (pag. {chunk['page']}) - score: {chunk['score']:.4f}")
-    
     # Step 2: Costruzione Prompt
     context = format_context(chunks)
     prompt = build_prompt(context, question)
     
     # Step 3: Query LLM
-    print(f"\n[3/3] Generazione risposta con LLM...\n")
-    print("-" * 40)
+    print(f"\n[2/3] Generazione risposta con LLM...\n")
+
     print("RISPOSTA:\n")
-    
     response = query_ollama_streaming(prompt)
     
-    print("-" * 40)
-    
+    # Mostra le fonti recuperate (per debug/trasparenza)
+    print(f"\n[3/3] Fonti utilizzate:")
+    for i, chunk in enumerate(chunks, 1):
+        print(f"      {i}. {chunk['source']} (pag. {chunk['page']}) - score: {chunk['score']:.4f}")
+
     return response
 
 

@@ -66,10 +66,14 @@ def format_context(chunks):
     context_parts = []
     
     for i, chunk in enumerate(chunks, 1):
-        context_parts.append(
-            f"[Chunk {i} – Source: {chunk['source']}, Page: {chunk['page']}]\n"
-            f"{chunk['text']}\n"
-        )
+        # Creiamo un header chiaro per ogni pezzo
+        header = f"--- REF ID: [{i}] ---"
+        meta = f"(Source: {chunk['source']}, Page: {chunk['page']})"
+        content = chunk['text']
+        
+        # Mettiamo tutto insieme
+        entry = f"{header}\nMetadata: {meta}\nContent: {content}\n"
+        context_parts.append(entry)
     
     return "\n".join(context_parts)
 
