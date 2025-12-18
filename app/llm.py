@@ -79,7 +79,7 @@ def query_ollama(prompt: str, model: str = OLLAMA_MODEL) -> str:
     }
     
     try:
-        response = requests.post(url, json=payload, timeout=120)
+        response = requests.post(url, json=payload, timeout=300)
         response.raise_for_status()
         
         result = response.json()
@@ -111,7 +111,7 @@ def query_ollama_streaming(prompt: str, model: str = OLLAMA_MODEL):
     }
     
     try:
-        response = requests.post(url, json=payload, stream=True, timeout=300)
+        response = requests.post(url, json=payload, stream=True, timeout=500)
         response.raise_for_status()
         
         full_response = ""

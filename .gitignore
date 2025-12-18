@@ -16,8 +16,12 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-
+# Data files 
+data/
 
 # Database e volumi Docker
 qdrant_storage/
 ollama_data/
+
+# Evaluation results
+evaluation_results/
