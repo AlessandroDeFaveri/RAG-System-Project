@@ -105,12 +105,12 @@ def get_found_sources_and_pages(chunks: List[Dict]) -> Tuple[List[str], Dict[str
 
 # METRICHE
 
-def compute_source_accuracy(expected_sources: List[str], found_sources: List[str]) -> Tuple[int, int, str]:
+def compute_source_accuracy(expected_sources: List[str], found_sources: List[str]) -> Tuple[int, int, float]:
     """
     Calcola l'accuratezza delle sorgenti (intersezione).
     
     Returns:
-        Tuple: (num_corretti, num_attesi, stringa_formato "X/Y")
+        Tuple: (num_corretti, num_attesi, accuracy_decimale)
     """
     expected_set = set(expected_sources)
     found_set = set(found_sources)
@@ -119,18 +119,19 @@ def compute_source_accuracy(expected_sources: List[str], found_sources: List[str
     num_correct = len(intersection)
     num_expected = len(expected_set)
     
-    return num_correct, num_expected, f'="{num_correct}/{num_expected}"'
+    accuracy = num_correct / num_expected 
+    return num_correct, num_expected, round(accuracy, 4)
 
 
 def compute_page_accuracy(
     expected_pages: Dict[str, List[int]], 
     found_pages: Dict[str, List[int]]
-) -> Tuple[int, int, str]:
+) -> Tuple[int, int, float]:
     """
     Calcola l'accuratezza delle pagine (solo per le sorgenti trovate correttamente).
     
     Returns:
-        Tuple: (num_pagine_corrette, num_pagine_attese, stringa_formato "X/Y")
+        Tuple: (num_pagine_corrette, num_pagine_attese, accuracy_decimale)
     """
     total_correct = 0
     total_expected = 0
@@ -143,7 +144,8 @@ def compute_page_accuracy(
             expected_page_set = set(expected_page_list)
             total_correct += len(expected_page_set & found_page_set)
     
-    return total_correct, total_expected, f'="{total_correct}/{total_expected}"'
+    accuracy = total_correct / total_expected 
+    return total_correct, total_expected, round(accuracy, 4)
 
 
 def compute_answer_similarity(
@@ -308,19 +310,23 @@ def export_results_csv(
     
     Formato output:
     seed, llm, id_domanda, source_accuracy, page_accuracy, similarity
+    
+    Aggiunge una riga vuota tra modelli diversi per separazione visiva.
     """
     fieldnames = ['seed', 'llm', 'question_id', 'source_accuracy', 'page_accuracy', 'similarity']
     
-    file_exists= os.path.isfile(output_path)
-    mode= "a"
+    file_exists = os.path.isfile(output_path)
+    mode = "a" if (file_exists and append) else "w"
     
     with open(output_path, mode, newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore', delimiter=';')
         
-        if not file_exists:
+        # Scrivi header solo se file nuovo
+        if not file_exists or not append:
             writer.writeheader()
-        else:
-            f.write("\n")  # Nuova linea se appending
+        elif file_exists and append:
+            # Aggiungi riga vuota prima di un nuovo blocco di risultati
+            f.write('\n')
             
         for result in results:
             writer.writerow({
