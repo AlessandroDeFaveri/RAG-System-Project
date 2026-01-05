@@ -20,6 +20,26 @@ services:
       - ollama_data:/root/.ollama
     restart: unless-stopped
 
+  # RAG Application
+  rag-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag-app
+    depends_on:
+      - qdrant
+      - ollama
+    environment:
+      - QDRANT_HOST=qdrant
+      - OLLAMA_HOST=ollama
+      - DATA_PATH=/app/data
+      - LLM_MODEL=llama3.2
+    volumes:
+      - ./data:/app/data              # PDF da indicizzare
+      - ./evaluation_results:/app/evaluation_results  # Output CSV
+    # Comando: full-evaluation | evaluation | interactive | shell
+    command: full-evaluation
+
 
 volumes:
   ollama_data:
