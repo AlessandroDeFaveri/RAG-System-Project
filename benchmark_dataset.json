@@ -53,5 +53,52 @@
         "expected_pages": {
             "[j1] 201908 - Soc. Netw. Anal. Min. - Social BI to understand the debate on vaccines on the Web and social media.pdf": [1, 6, 11]
         }
+    },
+    {   
+        "id": 6,
+        "question": "How do I cook a Carbonara?",
+        "expected_answer": "I don't know based on the provided documents.",
+        "expected_sources": [],
+        "expected_pages": {}
+    },
+    {        
+        "id": 7,
+        "question": "What is Avatar?",
+        "expected_answer": "I don't know based on the provided documents.",
+        "expected_sources": [],
+        "expected_pages": {}
+    },
+    {        
+        "id": 8,
+        "question": "Who won the World Cup in 2022?",
+        "expected_answer": "I don't know based on the provided documents.",
+        "expected_sources": [], 
+        "expected_pages": {}
+    },
+    {
+        "id": 9,
+        "question": "How are Large Language Models (LLMs) used in data management and Business Intelligence applications?",
+        "expected_answer": "LLMs are used in multiple ways in data management and BI. In multidimensional design, ChatGPT can assist with both supply-driven and demand-driven approaches, though it performs better at demand-driven design due to its natural language interpretation capabilities. LLMs can also be integrated into analytical pipelines to enhance user interaction and automate design tasks.",
+        "expected_sources": [
+            "[j22] 202505 - DKE - Conceptual design of multidimensional cubes with LLMs.pdf",
+            "[c17] 202303 - DOLAP 2023 The Whys and Wherefores of Cubes.pdf"
+        ],
+        "expected_pages": {
+            "[j22] 202505 - DKE - Conceptual design of multidimensional cubes with LLMs.pdf": [1, 2],
+            "[c17] 202303 - DOLAP 2023 The Whys and Wherefores of Cubes.pdf": [1]
+        }
+    },
+    {
+        "id": 10,
+        "question": "What techniques are used to handle streaming and real-time data in analytical systems?",
+        "expected_answer": "For streaming data, the DSC algorithm uses a two-phase approach: first aggregating data into coresets (compact summaries), then incrementally updating clustering profiles by detecting changes like splitting, merging, or sliding of clusters. For real-time contextual analytics, Augmented Business Intelligence (A-BI) maps perceived entities to multidimensional cube elements using domain knowledge and collaborative filtering from user feedback.",
+        "expected_sources": [
+            "[c19] 202309 - ADBIS 2023 - Streaming Approach to Schema Profiling.pdf",
+            "[c4] 201903 - DOLAP 2019 - Augmented Business Intelligence.pdf"
+        ],
+        "expected_pages": {
+            "[c19] 202309 - ADBIS 2023 - Streaming Approach to Schema Profiling.pdf": [1, 2, 4],
+            "[c4] 201903 - DOLAP 2019 - Augmented Business Intelligence.pdf": [1, 2]
+        }
     }
 ]
