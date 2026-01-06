@@ -1,15 +1,16 @@
 #!/bin/bash
-# Script per eseguire la valutazione completa con più modelli
+# Script per eseguire la valutazione completa con più modelli e template
 # Tutti i risultati vengono salvati nello stesso CSV
 
 set -e
 
-echo "RAG System - Valutazione Multi-Modello"
+echo "RAG System - Valutazione Multi-Modello e Multi-Template"
 
 # Configurazione
 OUTPUT_FILE="/app/evaluation_results/results.csv"
 BENCHMARK_FILE="/app/benchmark_dataset.json"
 MODELS=("llama3.2" "gemma2:2b" "phi3:mini")
+TEMPLATES=(1 2 3 4 5)
 
 # Determina il prossimo seed leggendo dal CSV esistente
 if [ -f "$OUTPUT_FILE" ]; then
@@ -59,18 +60,24 @@ fi
 # Non rimuovere il CSV - i nuovi risultati vengono aggiunti
 echo ""
 echo "[3/3] Avvio valutazione con seed=$SEED..."
+echo "Modelli: ${MODELS[*]}"
+echo "Template: ${TEMPLATES[*]}"
+echo ""
 
-# Esegui evaluation per ogni modello (sempre in append mode)
+# Esegui evaluation per ogni combinazione modello x template
 for model in "${MODELS[@]}"; do
-    echo ""
-    echo "----------------------------------------"
-    echo "Valutazione modello: $model"
-    echo "----------------------------------------"
-    python evaluation.py "$BENCHMARK_FILE" \
-        --seed "$SEED" \
-        --llm "$model" \
-        --output "$OUTPUT_FILE" \
-        --append
+    for template_id in "${TEMPLATES[@]}"; do
+        echo ""
+        echo "========================================"
+        echo "Modello: $model | Template: $template_id"
+        echo "========================================"
+        python evaluation.py "$BENCHMARK_FILE" \
+            --seed "$SEED" \
+            --llm "$model" \
+            --template-id "$template_id" \
+            --output "$OUTPUT_FILE" \
+            --append
+    done
 done
 
 echo ""

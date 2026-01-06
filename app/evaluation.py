@@ -33,9 +33,17 @@ def load_benchmark_dataset(path: str) -> List[Dict]:
 
 # RAG QUERY (versione per evaluation - non streaming)
 
-def rag_query_for_eval(question: str, model, qdrant_client, top_k: int = TOP_K, llm_model: str = OLLAMA_MODEL) -> Tuple[str, List[Dict]]:
+def rag_query_for_eval(question: str, model, qdrant_client, top_k: int = TOP_K, llm_model: str = OLLAMA_MODEL, template_id: int = 1) -> Tuple[str, List[Dict]]:
     """
     Esegue una query RAG e restituisce risposta + chunk trovati.
+    
+    Args:
+        question: La domanda dell'utente
+        model: Modello di embedding
+        qdrant_client: Client Qdrant
+        top_k: Numero di chunk da recuperare
+        llm_model: Nome del modello LLM
+        template_id: ID del template di prompt (1-5)
     
     Returns:
         Tuple[str, List[Dict]]: (risposta_llm, chunks_trovati)
@@ -48,7 +56,7 @@ def rag_query_for_eval(question: str, model, qdrant_client, top_k: int = TOP_K, 
     
     # Build prompt e query LLM (non streaming)
     context = format_context(chunks)
-    prompt = build_prompt(context, question)
+    prompt = build_prompt(context, question, template_id=template_id)
     response = query_ollama(prompt, model=llm_model)
     
     return response, chunks
@@ -179,7 +187,8 @@ def evaluate_single_question(
     qdrant_client,
     top_k: int = TOP_K,
     use_cited_only: bool = False,
-    llm_model: str = OLLAMA_MODEL
+    llm_model: str = OLLAMA_MODEL,
+    template_id: int = 1
 ) -> Dict:
     """
     Valuta una singola domanda.
@@ -191,6 +200,7 @@ def evaluate_single_question(
         top_k: Numero di chunk da recuperare
         use_cited_only: Se True, considera solo i chunk effettivamente citati nella risposta
         llm_model: Nome del modello LLM da usare
+        template_id: ID del template di prompt (1-5)
     
     Returns:
         Dizionario con risultati della valutazione
@@ -201,8 +211,8 @@ def evaluate_single_question(
     expected_sources = question_data['expected_sources']
     expected_pages = question_data['expected_pages']
     
-    # Esegui RAG query
-    response, chunks = rag_query_for_eval(question, embedding_model, qdrant_client, top_k, llm_model)
+    # Esegui RAG query con template specificato
+    response, chunks = rag_query_for_eval(question, embedding_model, qdrant_client, top_k, llm_model, template_id)
     
     # Decidi quali chunk considerare
     if use_cited_only:
@@ -242,6 +252,7 @@ def run_evaluation(
     llm_model: str = OLLAMA_MODEL,
     top_k: int = TOP_K,
     use_cited_only: bool = False,
+    template_id: int = 1,
     verbose: bool = True
 ) -> List[Dict]:
     """
@@ -253,6 +264,7 @@ def run_evaluation(
         llm_model: Nome del modello LLM da usare
         top_k: Numero di chunk da recuperare
         use_cited_only: Se True, considera solo chunk citati nella risposta
+        template_id: ID del template di prompt (1-5)
         verbose: Se True, stampa progress
     
     Returns:
@@ -265,7 +277,7 @@ def run_evaluation(
     # Carica risorse
     if verbose:
         print(f"\n{'='*60}")
-        print(f"EVALUATION - Seed: {seed}, LLM: {llm_model}")
+        print(f"EVALUATION - Seed: {seed}, LLM: {llm_model}, Template: {template_id}")
         print(f"{'='*60}\n")
     
     embedding_model = load_embedding_model()
@@ -286,10 +298,12 @@ def run_evaluation(
             qdrant_client, 
             top_k,
             use_cited_only,
-            llm_model
+            llm_model,
+            template_id
         )
         result['seed'] = seed
         result['llm'] = llm_model
+        result['template_id'] = template_id
         results.append(result)
         
         if verbose:
@@ -309,11 +323,11 @@ def export_results_csv(
     Esporta i risultati in formato CSV.
     
     Formato output:
-    seed, llm, id_domanda, source_accuracy, page_accuracy, similarity
+    seed, llm, template_id, question_id, source_accuracy, page_accuracy, similarity
     
     Aggiunge una riga vuota tra modelli diversi per separazione visiva.
     """
-    fieldnames = ['seed', 'llm', 'question_id', 'source_accuracy', 'page_accuracy', 'similarity']
+    fieldnames = ['seed', 'llm', 'template_id', 'question_id', 'source_accuracy', 'page_accuracy', 'similarity']
     
     file_exists = os.path.isfile(output_path)
     mode = "a" if (file_exists and append) else "w"
@@ -332,6 +346,7 @@ def export_results_csv(
             writer.writerow({
                 'seed': result['seed'],
                 'llm': result['llm'],
+                'template_id': result['template_id'],
                 'question_id': result['question_id'],
                 'source_accuracy': result['source_accuracy'],
                 'page_accuracy': result['page_accuracy'],
@@ -374,7 +389,7 @@ def main():
     Entry point per eseguire la valutazione da linea di comando.
     
     Usage:
-        python evaluation.py benchmark_dataset.json [--seed 0] [--llm llama3.2] [--output results.csv]
+        python evaluation.py benchmark_dataset.json [--seed 0] [--llm llama3.2] [--template-id 1] [--output results.csv]
     """
     import argparse
     
@@ -382,6 +397,7 @@ def main():
     parser.add_argument('dataset', help='Path al file JSON con le domande benchmark')
     parser.add_argument('--seed', type=int, default=0, help='Seed per riproducibilità')
     parser.add_argument('--llm', type=str, default=OLLAMA_MODEL, help='Modello LLM da usare')
+    parser.add_argument('--template-id', type=int, default=1, help='ID del template di prompt (1-5)')
     parser.add_argument('--top-k', type=int, default=TOP_K, help='Numero di chunk da recuperare')
     parser.add_argument('--output', type=str, default=None, help='Path per output CSV')
     parser.add_argument('--cited-only', action='store_true', help='Considera solo chunk citati')
@@ -396,7 +412,8 @@ def main():
         seed=args.seed,
         llm_model=args.llm,
         top_k=args.top_k,
-        use_cited_only=args.cited_only
+        use_cited_only=args.cited_only,
+        template_id=args.template_id
     )
     
     # Output
@@ -418,6 +435,7 @@ def main():
     total_page_expected = sum(r['page_total'] for r in results)
     
     print(f"Domande valutate: {len(results)}")
+    print(f"Template usato: {args.template_id}")
     print(f"Source accuracy totale: {total_src_correct}/{total_src_expected}")
     print(f"Page accuracy totale: {total_page_correct}/{total_page_expected}")
     print(f"Similarity media: {avg_similarity:.4f}")

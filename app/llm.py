@@ -6,9 +6,12 @@ import json
 from config import OLLAMA_HOST, OLLAMA_PORT, OLLAMA_MODEL
 
 
-# Prompt di sistema per il modello LLM
+# Dizionario dei template di prompt (5 versioni diverse)
 
-SYSTEM_PROMPT = """You are an academic Research Assistant.
+PROMPT_TEMPLATES = {
+    # Dettagliato
+
+    1: """You are an academic Research Assistant.
 Your goal is to answer the user's question using ONLY the provided context chunks.
 
 CONTEXT STRUCTURE:
@@ -31,19 +34,80 @@ OUTPUT FORMAT:
 References:
 [1] Source: <filename>, Page: <page>
 [3] Source: <filename>, Page: <page>
+""",
+
+    # Minimale
+    2: """You are a Research Assistant. Answer the question using ONLY the provided context.
+Cite sources using [1], [2], etc. If you cannot find the answer, say so.
+""",
+
+    # Ragionaemento passo passo
+    3: """You are an academic Research Assistant.
+First, analyze which chunks are relevant to the question.
+Then, reason step-by-step about the answer.
+Finally, provide a clear answer with citations [1], [2].
+
+Think through this systematically before answering.
+""",
+    # Regole strette
+    4: """You are a Research Assistant with STRICT rules:
+- Use ONLY information from the provided chunks
+- If the answer is NOT in the chunks, respond: "I cannot answer based on the provided documents."
+- NEVER use external knowledge
+- Every claim MUST have a citation [1], [2]
+
+If unsure, say you don't know rather than guessing.
+""",
+    # Semplice e diretto
+    5: """You are a helpful research assistant. A user is asking about academic papers.
+
+Look through the provided context chunks and answer their question naturally.
+When you use information from a chunk, mention the source like [1] or [2].
+
+Be helpful but honest - if you can't find the answer in the chunks, just say so.
 """
+}
+
+# Template di default (per retrocompatibilità)
+DEFAULT_TEMPLATE_ID = 1
+SYSTEM_PROMPT = PROMPT_TEMPLATES[DEFAULT_TEMPLATE_ID]
+
+
 # FUNZIONI
 
-def build_prompt(context: str, question: str) -> str:
+def get_prompt_template(template_id: int = DEFAULT_TEMPLATE_ID) -> str:
+    """
+    Restituisce il template di prompt specificato.
+    
+    Args:
+        template_id: ID del template (1-5)
+    
+    Returns:
+        Il testo del template
+    """
+    if template_id not in PROMPT_TEMPLATES:
+        print(f"Warning: Template {template_id} non trovato, uso default ({DEFAULT_TEMPLATE_ID})")
+        return PROMPT_TEMPLATES[DEFAULT_TEMPLATE_ID]
+    return PROMPT_TEMPLATES[template_id]
+
+
+def build_prompt(context: str, question: str, template_id: int = DEFAULT_TEMPLATE_ID) -> str:
     """
     Costruisce il prompt completo con contesto e domanda.
     
-    Formato richiesto dal prof:
-    - System prompt
+    Args:
+        context: Il contesto con i chunk
+        question: La domanda dell'utente
+        template_id: ID del template da usare (1-5)
+    
+    Formato:
+    - System prompt (dal template selezionato)
     - Context con i chunk
     - Question dell'utente
     """
-    prompt = f"""{SYSTEM_PROMPT}
+    system_prompt = get_prompt_template(template_id)
+    
+    prompt = f"""{system_prompt}
 
 Context:
 {context}
@@ -73,7 +137,7 @@ def query_ollama(prompt: str, model: str = OLLAMA_MODEL) -> str:
         "prompt": prompt,
         "stream": False, 
         "options": {
-            "temperature": 0.0,  
+            "temperature": 0.6,  
             "num_ctx": 4096      # Aumentiamo la finestra di contesto per leggere più chunk
         }
     }
@@ -105,7 +169,7 @@ def query_ollama_streaming(prompt: str, model: str = OLLAMA_MODEL):
         "prompt": prompt,
         "stream": True,
         "options": {
-            "temperature": 0.0,  # Deterministic for reproducibility
+            "temperature": 0.6,  # Deterministic for reproducibility
             "num_ctx": 4096      # Context window
         }
     }
