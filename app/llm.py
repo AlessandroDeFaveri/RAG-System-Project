@@ -91,7 +91,40 @@ def get_prompt_template(template_id: int = DEFAULT_TEMPLATE_ID) -> str:
     return PROMPT_TEMPLATES[template_id]
 
 
-def build_prompt(context: str, question: str, template_id: int = DEFAULT_TEMPLATE_ID) -> str:
+# Suffisso da aggiungere quando open_knowledge=True
+OPEN_KNOWLEDGE_SUFFIX = """
+
+ADDITIONAL INSTRUCTION:
+You may use your general knowledge to complement the information from the chunks if it helps provide a more complete answer.
+However, clearly distinguish between information from the chunks (cite with [1], [2]) and your own knowledge (no citation needed).
+"""
+
+
+def get_prompt_template(template_id: int = DEFAULT_TEMPLATE_ID, open_knowledge: bool = False) -> str:
+    """
+    Restituisce il template di prompt specificato.
+    
+    Args:
+        template_id: ID del template (1-5)
+        open_knowledge: Se True, permette all'LLM di usare conoscenza esterna
+    
+    Returns:
+        Il testo del template (con eventuale suffisso open_knowledge)
+    """
+    if template_id not in PROMPT_TEMPLATES:
+        print(f"Warning: Template {template_id} non trovato, uso default ({DEFAULT_TEMPLATE_ID})")
+        template = PROMPT_TEMPLATES[DEFAULT_TEMPLATE_ID]
+    else:
+        template = PROMPT_TEMPLATES[template_id]
+    
+    # Aggiungi suffisso se open_knowledge è attivo
+    if open_knowledge:
+        template = template + OPEN_KNOWLEDGE_SUFFIX
+    
+    return template
+
+
+def build_prompt(context: str, question: str, template_id: int = DEFAULT_TEMPLATE_ID, open_knowledge: bool = False) -> str:
     """
     Costruisce il prompt completo con contesto e domanda.
     
@@ -99,13 +132,14 @@ def build_prompt(context: str, question: str, template_id: int = DEFAULT_TEMPLAT
         context: Il contesto con i chunk
         question: La domanda dell'utente
         template_id: ID del template da usare (1-5)
+        open_knowledge: Se True, permette all'LLM di usare conoscenza esterna
     
     Formato:
     - System prompt (dal template selezionato)
     - Context con i chunk
     - Question dell'utente
     """
-    system_prompt = get_prompt_template(template_id)
+    system_prompt = get_prompt_template(template_id, open_knowledge)
     
     prompt = f"""{system_prompt}
 

@@ -33,7 +33,7 @@ def load_benchmark_dataset(path: str) -> List[Dict]:
 
 # RAG QUERY (versione per evaluation - non streaming)
 
-def rag_query_for_eval(question: str, model, qdrant_client, top_k: int = TOP_K, llm_model: str = OLLAMA_MODEL, template_id: int = 1) -> Tuple[str, List[Dict]]:
+def rag_query_for_eval(question: str, model, qdrant_client, top_k: int = TOP_K, llm_model: str = OLLAMA_MODEL, template_id: int = 1, open_knowledge: bool = False) -> Tuple[str, List[Dict]]:
     """
     Esegue una query RAG e restituisce risposta + chunk trovati.
     
@@ -44,6 +44,7 @@ def rag_query_for_eval(question: str, model, qdrant_client, top_k: int = TOP_K, 
         top_k: Numero di chunk da recuperare
         llm_model: Nome del modello LLM
         template_id: ID del template di prompt (1-5)
+        open_knowledge: Se True, permette all'LLM di usare conoscenza esterna
     
     Returns:
         Tuple[str, List[Dict]]: (risposta_llm, chunks_trovati)
@@ -56,7 +57,7 @@ def rag_query_for_eval(question: str, model, qdrant_client, top_k: int = TOP_K, 
     
     # Build prompt e query LLM (non streaming)
     context = format_context(chunks)
-    prompt = build_prompt(context, question, template_id=template_id)
+    prompt = build_prompt(context, question, template_id=template_id, open_knowledge=open_knowledge)
     response = query_ollama(prompt, model=llm_model)
     
     return response, chunks
@@ -127,7 +128,11 @@ def compute_source_accuracy(expected_sources: List[str], found_sources: List[str
     num_correct = len(intersection)
     num_expected = len(expected_set)
     
-    accuracy = num_correct / num_expected 
+    # Gestisce domande fuori scope (expected_sources vuoto)
+    if num_expected == 0:
+        accuracy = 1.0 if num_correct == 0 else 0.0
+    else:
+        accuracy = num_correct / num_expected 
     return num_correct, num_expected, round(accuracy, 4)
 
 
@@ -152,7 +157,11 @@ def compute_page_accuracy(
             expected_page_set = set(expected_page_list)
             total_correct += len(expected_page_set & found_page_set)
     
-    accuracy = total_correct / total_expected 
+    # Gestisce domande fuori scope (expected_pages vuoto)
+    if total_expected == 0:
+        accuracy = 1.0 if total_correct == 0 else 0.0
+    else:
+        accuracy = total_correct / total_expected 
     return total_correct, total_expected, round(accuracy, 4)
 
 
@@ -188,7 +197,8 @@ def evaluate_single_question(
     top_k: int = TOP_K,
     use_cited_only: bool = False,
     llm_model: str = OLLAMA_MODEL,
-    template_id: int = 1
+    template_id: int = 1,
+    open_knowledge: bool = False
 ) -> Dict:
     """
     Valuta una singola domanda.
@@ -201,6 +211,7 @@ def evaluate_single_question(
         use_cited_only: Se True, considera solo i chunk effettivamente citati nella risposta
         llm_model: Nome del modello LLM da usare
         template_id: ID del template di prompt (1-5)
+        open_knowledge: Se True, permette all'LLM di usare conoscenza esterna
     
     Returns:
         Dizionario con risultati della valutazione
@@ -212,7 +223,7 @@ def evaluate_single_question(
     expected_pages = question_data['expected_pages']
     
     # Esegui RAG query con template specificato
-    response, chunks = rag_query_for_eval(question, embedding_model, qdrant_client, top_k, llm_model, template_id)
+    response, chunks = rag_query_for_eval(question, embedding_model, qdrant_client, top_k, llm_model, template_id, open_knowledge)
     
     # Decidi quali chunk considerare
     if use_cited_only:
@@ -253,6 +264,7 @@ def run_evaluation(
     top_k: int = TOP_K,
     use_cited_only: bool = False,
     template_id: int = 1,
+    open_knowledge: bool = False,
     verbose: bool = True
 ) -> List[Dict]:
     """
@@ -265,6 +277,7 @@ def run_evaluation(
         top_k: Numero di chunk da recuperare
         use_cited_only: Se True, considera solo chunk citati nella risposta
         template_id: ID del template di prompt (1-5)
+        open_knowledge: Se True, permette all'LLM di usare conoscenza esterna
         verbose: Se True, stampa progress
     
     Returns:
@@ -277,7 +290,7 @@ def run_evaluation(
     # Carica risorse
     if verbose:
         print(f"\n{'='*60}")
-        print(f"EVALUATION - Seed: {seed}, LLM: {llm_model}, Template: {template_id}")
+        print(f"EVALUATION - Seed: {seed}, LLM: {llm_model}, Template: {template_id}, OpenKnowledge: {open_knowledge}")
         print(f"{'='*60}\n")
     
     embedding_model = load_embedding_model()
@@ -299,11 +312,13 @@ def run_evaluation(
             top_k,
             use_cited_only,
             llm_model,
-            template_id
+            template_id,
+            open_knowledge
         )
         result['seed'] = seed
         result['llm'] = llm_model
         result['template_id'] = template_id
+        result['open_knowledge'] = 'Yes' if open_knowledge else 'No'
         results.append(result)
         
         if verbose:
@@ -327,7 +342,7 @@ def export_results_csv(
     
     Aggiunge una riga vuota tra modelli diversi per separazione visiva.
     """
-    fieldnames = ['seed', 'llm', 'template_id', 'question_id', 'source_accuracy', 'page_accuracy', 'similarity']
+    fieldnames = ['seed', 'llm', 'template_id', 'question_id', 'source_accuracy', 'page_accuracy', 'similarity', 'open_knowledge']
     
     file_exists = os.path.isfile(output_path)
     mode = "a" if (file_exists and append) else "w"
@@ -350,7 +365,8 @@ def export_results_csv(
                 'question_id': result['question_id'],
                 'source_accuracy': result['source_accuracy'],
                 'page_accuracy': result['page_accuracy'],
-                'similarity': result['similarity']
+                'similarity': result['similarity'],
+                'open_knowledge': result['open_knowledge']
             })
     
     print(f"\nRisultati salvati in: {output_path}")
@@ -389,7 +405,7 @@ def main():
     Entry point per eseguire la valutazione da linea di comando.
     
     Usage:
-        python evaluation.py benchmark_dataset.json [--seed 0] [--llm llama3.2] [--template-id 1] [--output results.csv]
+        python evaluation.py benchmark_dataset.json [--seed 0] [--llm llama3.2] [--template-id 1] [--open-knowledge] [--output results.csv]
     """
     import argparse
     
@@ -403,6 +419,7 @@ def main():
     parser.add_argument('--cited-only', action='store_true', help='Considera solo chunk citati')
     parser.add_argument('--detailed', action='store_true', help='Esporta risultati dettagliati')
     parser.add_argument('--append', action='store_true', help='Append al file CSV esistente')
+    parser.add_argument('--open-knowledge', action='store_true', help='Permetti all\'LLM di usare conoscenza esterna')
     
     args = parser.parse_args()
     
@@ -413,7 +430,8 @@ def main():
         llm_model=args.llm,
         top_k=args.top_k,
         use_cited_only=args.cited_only,
-        template_id=args.template_id
+        template_id=args.template_id,
+        open_knowledge=args.open_knowledge
     )
     
     # Output
@@ -436,6 +454,7 @@ def main():
     
     print(f"Domande valutate: {len(results)}")
     print(f"Template usato: {args.template_id}")
+    print(f"Open Knowledge: {'Yes' if args.open_knowledge else 'No'}")
     print(f"Source accuracy totale: {total_src_correct}/{total_src_expected}")
     print(f"Page accuracy totale: {total_page_correct}/{total_page_expected}")
     print(f"Similarity media: {avg_similarity:.4f}")

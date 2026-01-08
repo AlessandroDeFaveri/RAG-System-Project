@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script per eseguire la valutazione completa con più modelli e template
+docker compose build rag-app# Script per eseguire la valutazione completa con più modelli e template
 # Tutti i risultati vengono salvati nello stesso CSV
 
 set -e
@@ -47,14 +47,21 @@ for model in "${MODELS[@]}"; do
     ensure_model "$model"
 done
 
-# Esegui ingestion se necessario
+# Controlla se Qdrant ha già dati
 echo ""
 echo "[2/3] Controllo ingestion..."
-if [ -d "/app/data" ] && [ "$(ls -A /app/data/*.pdf 2>/dev/null)" ]; then
-    echo "  Trovati PDF, eseguo ingestion..."
-    python ingestion.py
+QDRANT_POINTS=$(curl -s "http://${QDRANT_HOST}:6333/collections/documenti_tesi" | grep -o '"points_count":[0-9]*' | grep -o '[0-9]*' || echo "0")
+
+if [ "$QDRANT_POINTS" -gt 0 ] 2>/dev/null; then
+    echo "  Qdrant ha già $QDRANT_POINTS documenti indicizzati. Salto ingestion."
 else
-    echo "  Nessun PDF nuovo da indicizzare."
+    # Qdrant vuoto, controlla se ci sono PDF da indicizzare
+    if [ -d "/app/data" ] && [ "$(ls -A /app/data/*.pdf 2>/dev/null)" ]; then
+        echo "  Qdrant vuoto. Trovati PDF, eseguo ingestion..."
+        python ingestion.py
+    else
+        echo "  Qdrant vuoto e nessun PDF trovato."
+    fi
 fi
 
 # Non rimuovere il CSV - i nuovi risultati vengono aggiunti
@@ -62,21 +69,33 @@ echo ""
 echo "[3/3] Avvio valutazione con seed=$SEED..."
 echo "Modelli: ${MODELS[*]}"
 echo "Template: ${TEMPLATES[*]}"
+echo "Open Knowledge: No e Yes"
 echo ""
 
-# Esegui evaluation per ogni combinazione modello x template
+# Esegui evaluation per ogni combinazione modello x template x open_knowledge
 for model in "${MODELS[@]}"; do
     for template_id in "${TEMPLATES[@]}"; do
-        echo ""
-        echo "========================================"
-        echo "Modello: $model | Template: $template_id"
-        echo "========================================"
-        python evaluation.py "$BENCHMARK_FILE" \
-            --seed "$SEED" \
-            --llm "$model" \
-            --template-id "$template_id" \
-            --output "$OUTPUT_FILE" \
-            --append
+        for open_knowledge in "false" "true"; do
+            if [ "$open_knowledge" = "true" ]; then
+                ok_flag="--open-knowledge"
+                ok_label="Yes"
+            else
+                ok_flag=""
+                ok_label="No"
+            fi
+            
+            echo ""
+            echo "========================================"
+            echo "Modello: $model | Template: $template_id | OpenKnowledge: $ok_label"
+            echo "========================================"
+            python evaluation.py "$BENCHMARK_FILE" \
+                --seed "$SEED" \
+                --llm "$model" \
+                --template-id "$template_id" \
+                $ok_flag \
+                --output "$OUTPUT_FILE" \
+                --append
+        done
     done
 done
 
