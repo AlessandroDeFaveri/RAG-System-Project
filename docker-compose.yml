@@ -35,6 +35,10 @@ services:
       - DATA_PATH=/app/data
       - LLM_MODEL=llama3.2
     volumes:
+      - ./requirements.txt:/app/requirements.txt
+      - ./benchmark_dataset.json:/app/benchmark_dataset.json
+      - ./scripts:/app/scripts  
+      - ./app:/app/app          # Monto la cartella in tempo reale
       - ./data:/app/data              # PDF da indicizzare
       - ./evaluation_results:/app/evaluation_results  # Output CSV
     # Comando: full-evaluation | evaluation | interactive | shell
