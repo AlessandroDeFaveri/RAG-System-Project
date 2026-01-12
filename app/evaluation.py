@@ -406,6 +406,8 @@ def main():
     
     Usage:
         python evaluation.py benchmark_dataset.json [--seed 0] [--llm llama3.2] [--template-id 1] [--open-knowledge] [--output results.csv]
+        
+    Se --template-id non è specificato, esegue tutti i 5 template.
     """
     import argparse
     
@@ -413,47 +415,65 @@ def main():
     parser.add_argument('dataset', help='Path al file JSON con le domande benchmark')
     parser.add_argument('--seed', type=int, default=0, help='Seed per riproducibilità')
     parser.add_argument('--llm', type=str, default=OLLAMA_MODEL, help='Modello LLM da usare')
-    parser.add_argument('--template-id', type=int, default=1, help='ID del template di prompt (1-5)')
+    parser.add_argument('--template-id', type=int, default=None, help='ID del template di prompt (1-5). Se non specificato, usa tutti.')
     parser.add_argument('--top-k', type=int, default=TOP_K, help='Numero di chunk da recuperare')
-    parser.add_argument('--output', type=str, default=None, help='Path per output CSV')
+    parser.add_argument('--output', type=str, default='/app/evaluation_results/results.csv', help='Path per output CSV')
     parser.add_argument('--cited-only', action='store_true', help='Considera solo chunk citati')
     parser.add_argument('--detailed', action='store_true', help='Esporta risultati dettagliati')
-    parser.add_argument('--append', action='store_true', help='Append al file CSV esistente')
+    parser.add_argument('--overwrite', action='store_true', help='Sovrascrivi il file CSV invece di fare append')
     parser.add_argument('--open-knowledge', action='store_true', help='Permetti all\'LLM di usare conoscenza esterna')
     
     args = parser.parse_args()
     
-    # Esegui valutazione
-    results = run_evaluation(
-        dataset_path=args.dataset,
-        seed=args.seed,
-        llm_model=args.llm,
-        top_k=args.top_k,
-        use_cited_only=args.cited_only,
-        template_id=args.template_id,
-        open_knowledge=args.open_knowledge
-    )
+    # Determina quali template usare
+    if args.template_id is not None:
+        # Template specifico
+        templates_to_run = [args.template_id]
+    else:
+        # Tutti i 5 template
+        templates_to_run = [1, 2, 3, 4, 5]
     
-    # Output
-    if args.output:
+    all_results = []
+    
+    for template_id in templates_to_run:
+        # Esegui valutazione per questo template
+        results = run_evaluation(
+            dataset_path=args.dataset,
+            seed=args.seed,
+            llm_model=args.llm,
+            top_k=args.top_k,
+            use_cited_only=args.cited_only,
+            template_id=template_id,
+            open_knowledge=args.open_knowledge
+        )
+        all_results.extend(results)
+        
+        # Output progressivo - crea la cartella se non esiste
+        output_dir = os.path.dirname(args.output)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+            
         if args.detailed:
-            export_detailed_results_csv(results, args.output)
+            export_detailed_results_csv(results, args.output.replace('.csv', f'_template{template_id}.csv'))
         else:
-            export_results_csv(results, args.output, append=args.append)
+            # Sempre append, a meno che non sia --overwrite E primo template
+            is_first_template = (template_id == templates_to_run[0])
+            should_overwrite = args.overwrite and is_first_template
+            export_results_csv(results, args.output, append=not should_overwrite)
     
     # Stampa summary
     print(f"\n{'='*60}")
     print("SUMMARY")
     print(f"{'='*60}")
     
-    avg_similarity = np.mean([r['similarity'] for r in results])
-    total_src_correct = sum(r['source_correct'] for r in results)
-    total_src_expected = sum(r['source_total'] for r in results)
-    total_page_correct = sum(r['page_correct'] for r in results)
-    total_page_expected = sum(r['page_total'] for r in results)
+    avg_similarity = np.mean([r['similarity'] for r in all_results])
+    total_src_correct = sum(r['source_correct'] for r in all_results)
+    total_src_expected = sum(r['source_total'] for r in all_results)
+    total_page_correct = sum(r['page_correct'] for r in all_results)
+    total_page_expected = sum(r['page_total'] for r in all_results)
     
-    print(f"Domande valutate: {len(results)}")
-    print(f"Template usato: {args.template_id}")
+    print(f"Domande valutate: {len(all_results)}")
+    print(f"Template usati: {templates_to_run}")
     print(f"Open Knowledge: {'Yes' if args.open_knowledge else 'No'}")
     print(f"Source accuracy totale: {total_src_correct}/{total_src_expected}")
     print(f"Page accuracy totale: {total_page_correct}/{total_page_expected}")

@@ -75,22 +75,6 @@ SYSTEM_PROMPT = PROMPT_TEMPLATES[DEFAULT_TEMPLATE_ID]
 
 # FUNZIONI
 
-def get_prompt_template(template_id: int = DEFAULT_TEMPLATE_ID) -> str:
-    """
-    Restituisce il template di prompt specificato.
-    
-    Args:
-        template_id: ID del template (1-5)
-    
-    Returns:
-        Il testo del template
-    """
-    if template_id not in PROMPT_TEMPLATES:
-        print(f"Warning: Template {template_id} non trovato, uso default ({DEFAULT_TEMPLATE_ID})")
-        return PROMPT_TEMPLATES[DEFAULT_TEMPLATE_ID]
-    return PROMPT_TEMPLATES[template_id]
-
-
 # Suffisso da aggiungere quando open_knowledge=True
 OPEN_KNOWLEDGE_SUFFIX = """
 
