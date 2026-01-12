@@ -52,14 +52,22 @@ else
 fi
 echo "  Modelli pronti!"
 
-# Esegui ingestion se ci sono PDF nella cartella data
+# Esegui ingestion se ci sono PDF nella cartella data E Qdrant è vuoto
 echo "[4/4] Controllo ingestion..."
 cd /app/app
-if [ -d "/app/data" ] && [ "$(ls -A /app/data/*.pdf 2>/dev/null)" ]; then
-    echo "  Trovati PDF, eseguo ingestion..."
-    python ingestion.py
+
+# Controlla se ci sono già punti in Qdrant
+QDRANT_POINTS=$(curl -s "http://${QDRANT_HOST}:6333/collections/documenti_tesi" 2>/dev/null | grep -o '"points_count":[0-9]*' | grep -o '[0-9]*' || echo "0")
+
+if [ "$QDRANT_POINTS" -gt 0 ]; then
+    echo "  Qdrant contiene già $QDRANT_POINTS punti. Skip ingestion."
 else
-    echo "  Nessun PDF trovato o già indicizzati."
+    if [ -d "/app/data" ] && [ "$(ls -A /app/data/*.pdf 2>/dev/null)" ]; then
+        echo "  Trovati PDF e Qdrant vuoto, eseguo ingestion..."
+        python ingestion.py
+    else
+        echo "  Nessun PDF trovato in /app/data."
+    fi
 fi
 
 echo ""
