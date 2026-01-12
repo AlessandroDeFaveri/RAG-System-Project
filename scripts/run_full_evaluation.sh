@@ -9,7 +9,7 @@ echo "RAG System - Valutazione Multi-Modello e Multi-Template"
 # Configurazione
 OUTPUT_FILE="/app/evaluation_results/results.csv"
 BENCHMARK_FILE="/app/benchmark_dataset.json"
-MODELS=("llama3.2" "gemma2:2b" "phi3:mini")
+MODELS=("llama3.2" "gemma2:2b" "phi3:mini" "qwen2.5:7b")
 TEMPLATES=(1 2 3 4 5)
 
 # Determina il prossimo seed leggendo dal CSV esistente

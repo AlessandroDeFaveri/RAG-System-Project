@@ -41,12 +41,22 @@ pull_model() {
 echo "[3/4] Verifica modelli LLM..."
 if [ "$1" = "full-evaluation" ]; then
     # Per full-evaluation, scarica tutti i modelli necessari
-    MODELS=("llama3.2" "gemma2:2b" "phi3:mini")
+    MODELS=("llama3.2" "gemma2:2b" "phi3:mini" "qwen2.5:7b")
     for model in "${MODELS[@]}"; do
         pull_model "$model"
     done
 else
-    # Per le altre modalità, solo il modello specificato
+    # Estrai il modello dal parametro --llm se presente
+    LLM_MODEL=""
+    for i in "$@"; do
+        if [ "$prev_arg" = "--llm" ]; then
+            LLM_MODEL="$i"
+            break
+        fi
+        prev_arg="$i"
+    done
+    
+    # Se non specificato, usa il default
     LLM_MODEL=${LLM_MODEL:-llama3.2}
     pull_model "$LLM_MODEL"
 fi

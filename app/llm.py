@@ -161,7 +161,7 @@ def query_ollama(prompt: str, model: str = OLLAMA_MODEL) -> str:
     }
     
     try:
-        response = requests.post(url, json=payload, timeout=300)
+        response = requests.post(url, json=payload, timeout=600)
         response.raise_for_status()
         
         result = response.json()
