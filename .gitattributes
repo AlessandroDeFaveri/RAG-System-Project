@@ -1,0 +1,2 @@
+# Forza i file shell ad sempre LF
+*.sh text eol=lf
