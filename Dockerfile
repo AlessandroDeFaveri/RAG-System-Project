@@ -29,4 +29,4 @@ ENV OLLAMA_HOST=ollama
 ENV DATA_PATH=/app/data
 ENV PYTHONUNBUFFERED=1
 
-ENTRYPOINT ["/app/scripts/entrypoint.sh"]
+ENTRYPOINT ["/bin/bash", "/app/scripts/entrypoint.sh"]

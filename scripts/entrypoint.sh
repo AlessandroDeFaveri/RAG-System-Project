@@ -65,16 +65,22 @@ echo "  Modelli pronti!"
 # Esegui ingestion se ci sono PDF nella cartella data E Qdrant è vuoto
 echo "[4/4] Controllo ingestion..."
 cd /app/app
+# Controlla se la collection esiste e contiene punti
+COLLECTION_RESPONSE=$(curl -s "http://${QDRANT_HOST}:6333/collections/documenti_tesi" 2>/dev/null)
+COLLECTION_EXISTS=$(echo "$COLLECTION_RESPONSE" | grep -c '"points_count"' || echo "0")
+QDRANT_POINTS=$(echo "$COLLECTION_RESPONSE" | grep -o '"points_count":[0-9]*' | grep -o '[0-9]*' || echo "0")
 
-# Controlla se ci sono già punti in Qdrant
-QDRANT_POINTS=$(curl -s "http://${QDRANT_HOST}:6333/collections/documenti_tesi" 2>/dev/null | grep -o '"points_count":[0-9]*' | grep -o '[0-9]*' || echo "0")
+# Se QDRANT_POINTS è vuoto, impostalo a 0
+if [ -z "$QDRANT_POINTS" ]; then
+    QDRANT_POINTS=0
+fi
 
-if [ "$QDRANT_POINTS" -gt 0 ]; then
+if [ "$COLLECTION_EXISTS" -gt 0 ] && [ "$QDRANT_POINTS" -gt 0 ]; then
     echo "  Qdrant contiene già $QDRANT_POINTS punti. Skip ingestion."
 else
     if [ -d "/app/data" ] && [ "$(ls -A /app/data/*.pdf 2>/dev/null)" ]; then
-        echo "  Trovati PDF e Qdrant vuoto, eseguo ingestion..."
-        python ingestion.py
+        echo "  Collection non esistente o vuota, eseguo ingestion..."
+        python embeddings.py
     else
         echo "  Nessun PDF trovato in /app/data."
     fi

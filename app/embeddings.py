@@ -11,18 +11,14 @@ from tqdm import tqdm
 # Importiamo le funzioni dallo Step 1
 from ingestion import get_pdf_files, extract_pages_from_pdf, create_chunks
 
-# CONFIGURAZIONE
+# CONFIGURAZIONE - importa da config.py
+from config import (
+    DATA_PATH, CHUNK_SIZE, CHUNK_OVERLAP,
+    EMBEDDING_MODEL, EMBEDDING_DIM,
+    QDRANT_HOST, QDRANT_PORT, COLLECTION_NAME
+)
 
-DATA_PATH = "./data"
-CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 200
-
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-EMBEDDING_DIMENSION = 384
-
-QDRANT_HOST = "localhost"
-QDRANT_PORT = 6333
-COLLECTION_NAME = "documenti_tesi"
+EMBEDDING_DIMENSION = EMBEDDING_DIM
 
 
 # FUNZIONI
