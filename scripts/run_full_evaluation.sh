@@ -1,5 +1,5 @@
 #!/bin/bash
-docker compose build rag-app# Script per eseguire la valutazione completa con più modelli e template
+#Script per eseguire una valutazione completa su più modelli e template
 # Tutti i risultati vengono salvati nello stesso CSV
 
 set -e
@@ -58,7 +58,7 @@ else
     # Qdrant vuoto, controlla se ci sono PDF da indicizzare
     if [ -d "/app/data" ] && [ "$(ls -A /app/data/*.pdf 2>/dev/null)" ]; then
         echo "  Qdrant vuoto. Trovati PDF, eseguo ingestion..."
-        python ingestion.py
+        python embeddings.py
     else
         echo "  Qdrant vuoto e nessun PDF trovato."
     fi
