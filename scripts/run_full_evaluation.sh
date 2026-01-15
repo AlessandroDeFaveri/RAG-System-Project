@@ -93,8 +93,8 @@ for model in "${MODELS[@]}"; do
                 --llm "$model" \
                 --template-id "$template_id" \
                 $ok_flag \
-                --output "$OUTPUT_FILE" \
-                --append
+                --output "$OUTPUT_FILE" 
+                
         done
     done
 done
