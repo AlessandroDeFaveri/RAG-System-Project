@@ -97,7 +97,7 @@ if [ "$1" = "evaluation" ]; then
     python evaluation.py "$@"
 elif [ "$1" = "full-evaluation" ]; then
     echo "Avvio evaluation multi-modello..."
-    exec /app/scripts/run_full_evaluation.sh
+    exec /bin/bash /app/scripts/run_full_evaluation.sh
 elif [ "$1" = "interactive" ]; then
     echo "Avvio modalità interattiva..."
     python main.py
