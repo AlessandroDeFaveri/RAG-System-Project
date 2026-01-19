@@ -15,7 +15,7 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
 from retrieval import load_embedding_model, connect_to_qdrant, search_similar_chunks, format_context
-from llm import build_prompt, query_ollama
+from llm import build_prompt, query_llm
 from config import OLLAMA_MODEL, TOP_K
 
 
@@ -58,7 +58,7 @@ def rag_query_for_eval(question: str, model, qdrant_client, top_k: int = TOP_K, 
     # Build prompt e query LLM (non streaming)
     context = format_context(chunks)
     prompt = build_prompt(context, question, template_id=template_id, open_knowledge=open_knowledge)
-    response = query_ollama(prompt, model=llm_model)
+    response = query_llm(prompt, model=llm_model)
     
     return response, chunks
 
@@ -339,8 +339,6 @@ def export_results_csv(
     
     Formato output:
     seed, llm, template_id, question_id, source_accuracy, page_accuracy, similarity
-    
-    Aggiunge una riga vuota tra modelli diversi per separazione visiva.
     """
     fieldnames = ['seed', 'llm', 'template_id', 'question_id', 'source_accuracy', 'page_accuracy', 'similarity', 'open_knowledge']
     
@@ -374,20 +372,30 @@ def export_results_csv(
 
 def export_detailed_results_csv(
     results: List[Dict], 
-    output_path: str
+    output_path: str,
+    append: bool = True
 ) -> None:
     """
     Esporta risultati dettagliati (include anche la risposta LLM).
     """
     fieldnames = [
-        'seed', 'llm', 'question_id', 'question', 
+        'seed', 'llm','template_id', 'question_id', 'question', 
         'source_accuracy', 'page_accuracy', 'similarity',
-        'found_sources', 'found_pages', 'llm_response'
+        'open_knowledge', 'found_sources', 'found_pages', 'llm_response'
     ]
     
-    with open(output_path, 'w', newline='', encoding='utf-8') as f:
+    file_exists = os.path.isfile(output_path)
+    mode = "a" if (file_exists and append) else "w"
+    
+    with open(output_path, mode, newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore', delimiter=';')
-        writer.writeheader()
+        
+        # Scrivi header solo se file nuovo
+        if not file_exists or not append:
+            writer.writeheader()
+        elif file_exists and append:
+            # Aggiungi riga vuota prima di un nuovo blocco di risultati
+            f.write('\n')
         
         for result in results:
             row = result.copy()
@@ -452,14 +460,17 @@ def main():
         output_dir = os.path.dirname(args.output)
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
-            
+        
+        # SEMPRE append, tranne se esplicitamente richiesto --overwrite
+        should_append = not args.overwrite
+        
         if args.detailed:
-            export_detailed_results_csv(results, args.output.replace('.csv', f'_template{template_id}.csv'))
-        else:
-            # Sempre append, a meno che non sia --overwrite E primo template
-            is_first_template = (template_id == templates_to_run[0])
-            should_overwrite = args.overwrite and is_first_template
-            export_results_csv(results, args.output, append=not should_overwrite)
+            # Usa file _detailed.csv per i risultati dettagliati
+            detailed_output = args.output.replace('.csv', '_detailed.csv')
+            export_detailed_results_csv(results, detailed_output, append=should_append)
+        
+        # Salva sempre anche nel CSV standard
+        export_results_csv(results, args.output, append=should_append)
     
     # Stampa summary
     print(f"\n{'='*60}")
