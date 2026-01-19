@@ -9,7 +9,12 @@ echo "RAG System - Valutazione Multi-Modello e Multi-Template"
 # Configurazione
 OUTPUT_FILE="/app/evaluation_results/results.csv"
 BENCHMARK_FILE="/app/benchmark_dataset.json"
-MODELS=("llama3.2" "gemma2:2b" "phi3:mini" "qwen2.5:7b")
+# Modelli Ollama (locali)
+OLLAMA_MODELS=("llama3.2" "qwen2.5:7b")
+# Modelli Azure OpenAI (cloud) - richiedono AZURE_OPENAI_KEY
+AZURE_MODELS=("gpt-5-mini")
+# Tutti i modelli da testare
+MODELS=("${OLLAMA_MODELS[@]}" "${AZURE_MODELS[@]}")
 TEMPLATES=(1 2 3 4 5)
 
 # Determina il prossimo seed leggendo dal CSV esistente
@@ -29,9 +34,25 @@ fi
 
 cd /app/app
 
-# Funzione per verificare/scaricare un modello
+# Funzione per verificare se è un modello Azure
+is_azure_model() {
+    local model=$1
+    for azure_model in "${AZURE_MODELS[@]}"; do
+        if [[ "$model" == "$azure_model" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Funzione per verificare/scaricare un modello Ollama
 ensure_model() {
     local model=$1
+    # Salta i modelli Azure (non passano da Ollama)
+    if is_azure_model "$model"; then
+        echo "  $model è un modello Azure OpenAI, skip download."
+        return
+    fi
     echo "Verifico modello $model..."
     if ! curl -s http://${OLLAMA_HOST}:11434/api/tags | grep -q "$model"; then
         echo "  Scarico modello $model..."
@@ -40,12 +61,26 @@ ensure_model() {
     echo "  Modello $model pronto!"
 }
 
-# Scarica tutti i modelli prima di iniziare
+# Scarica tutti i modelli Ollama prima di iniziare
 echo ""
-echo "[1/3] Download modelli..."
-for model in "${MODELS[@]}"; do
+echo "[1/3] Download modelli Ollama..."
+for model in "${OLLAMA_MODELS[@]}"; do
     ensure_model "$model"
 done
+
+# Verifica chiave Azure se ci sono modelli Azure
+if [ ${#AZURE_MODELS[@]} -gt 0 ]; then
+    if [ -z "$AZURE_OPENAI_KEY" ]; then
+        echo ""
+        echo "   ATTENZIONE: AZURE_OPENAI_KEY non configurata!"
+        echo "   I modelli Azure (${AZURE_MODELS[*]}) verranno saltati."
+        echo "   Per abilitarli, imposta la chiave nel file .env"
+        # Rimuovi i modelli Azure dalla lista
+        MODELS=("${OLLAMA_MODELS[@]}")
+    else
+        echo "  Azure OpenAI configurato. Modelli: ${AZURE_MODELS[*]}"
+    fi
+fi
 
 # Controlla se Qdrant ha già dati
 echo ""
@@ -93,7 +128,8 @@ for model in "${MODELS[@]}"; do
                 --llm "$model" \
                 --template-id "$template_id" \
                 $ok_flag \
-                --output "$OUTPUT_FILE" 
+                --output "$OUTPUT_FILE" \
+                --detailed
                 
         done
     done
