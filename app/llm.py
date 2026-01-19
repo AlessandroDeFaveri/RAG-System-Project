@@ -1,9 +1,9 @@
 """
-Step 3: LLM - Interazione con Ollama
+Step 3: LLM - Interazione con Ollama e Azure OpenAI
 """
 import requests
 import json
-from config import OLLAMA_HOST, OLLAMA_PORT, OLLAMA_MODEL
+from config import OLLAMA_HOST, OLLAMA_PORT, OLLAMA_MODEL, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_KEY, AZURE_OPENAI_API_VERSION
 
 
 # Dizionario dei template di prompt (5 versioni diverse)
@@ -215,10 +215,82 @@ def query_ollama_streaming(prompt: str, model: str = OLLAMA_MODEL):
         return ""
 
 
+# AZURE OPENAI
+
+def is_azure_model(model: str) -> bool:
+    """Verifica se il modello è un modello Azure OpenAI."""
+    azure_models = ["gpt-5", "gpt-4", "gpt-4o", "gpt-4o-mini", "gpt-35-turbo", "gpt-4-turbo"]
+    return any(model.startswith(m) for m in azure_models)
+
+
+def query_azure_openai(prompt: str, model: str = "gpt-5-mini") -> str:
+    """
+    Invia una query ad Azure OpenAI e restituisce la risposta.
+    
+    Args:
+        prompt: Il prompt completo (system + context + question)
+        model: Il deployment name del modello (es. gpt-4o-mini, gpt-4o, gpt-5)
+    
+    Returns:
+        La risposta del modello
+    """
+    if not AZURE_OPENAI_KEY:
+        return "Errore: AZURE_OPENAI_KEY non configurata. Imposta la variabile d'ambiente."
+    
+    url = f"{AZURE_OPENAI_ENDPOINT}openai/deployments/{model}/chat/completions?api-version={AZURE_OPENAI_API_VERSION}"
+    
+    headers = {
+        "Content-Type": "application/json",
+        "api-key": AZURE_OPENAI_KEY
+    }
+    
+    payload = {
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.6,
+        "max_tokens": 4096,
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=600)
+        response.raise_for_status()
+        
+        result = response.json()
+        return result["choices"][0]["message"]["content"]
+        
+    except requests.exceptions.ConnectionError:
+        return "Errore: Impossibile connettersi ad Azure OpenAI."
+    except requests.exceptions.Timeout:
+        return "Errore: Timeout nella risposta di Azure OpenAI"
+    except requests.exceptions.HTTPError as e:
+        return f"Errore HTTP: {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        return f"Errore: {str(e)}"
+
+
+def query_llm(prompt: str, model: str = OLLAMA_MODEL) -> str:
+    """
+    Funzione unificata per query LLM.
+    Seleziona automaticamente Ollama o Azure OpenAI in base al modello.
+    
+    Args:
+        prompt: Il prompt completo
+        model: Nome del modello (es. llama3.2, gpt-4o-mini)
+    
+    Returns:
+        La risposta del modello
+    """
+    if is_azure_model(model):
+        return query_azure_openai(prompt, model)
+    else:
+        return query_ollama(prompt, model)
+
+
 # TEST
 
 if __name__ == "__main__":
-    print("--- TEST OLLAMA ---\n")
+    print("--- TEST LLM ---\n")
     
     # Test semplice
     test_prompt = "What is 2 + 4? Answer in one word."

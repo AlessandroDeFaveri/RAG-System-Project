@@ -34,6 +34,9 @@ services:
       - OLLAMA_HOST=ollama
       - DATA_PATH=/app/data
       - LLM_MODEL=llama3.2
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT:-}
+      - AZURE_OPENAI_KEY=${AZURE_OPENAI_KEY:-}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION:-2026-01-01-preview}
     volumes:
       - ./requirements.txt:/app/requirements.txt
       - ./benchmark_dataset.json:/app/benchmark_dataset.json
