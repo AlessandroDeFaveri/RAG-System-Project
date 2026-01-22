@@ -219,11 +219,11 @@ def query_ollama_streaming(prompt: str, model: str = OLLAMA_MODEL):
 
 def is_azure_model(model: str) -> bool:
     """Verifica se il modello è un modello Azure OpenAI."""
-    azure_models = ["gpt-5", "gpt-4", "gpt-4o", "gpt-4o-mini", "gpt-35-turbo", "gpt-4-turbo"]
+    azure_models = ["gpt-5-mini", "gpt-4", "gpt-4o", "gpt-4o-mini", "gpt-35-turbo", "gpt-4-turbo"]
     return any(model.startswith(m) for m in azure_models)
 
 
-def query_azure_openai(prompt: str, model: str = "gpt-5-mini") -> str:
+def query_azure_openai(prompt: str, model: str = "gpt-4o") -> str:
     """
     Invia una query ad Azure OpenAI e restituisce la risposta.
     
