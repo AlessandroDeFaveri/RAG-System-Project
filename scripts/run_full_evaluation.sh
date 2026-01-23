@@ -12,7 +12,7 @@ BENCHMARK_FILE="/app/benchmark_dataset.json"
 # Modelli Ollama (locali)
 OLLAMA_MODELS=("llama3.2" "qwen2.5:7b")
 # Modelli Azure OpenAI (cloud) - richiedono AZURE_OPENAI_KEY
-AZURE_MODELS=("gpt-5-mini")
+AZURE_MODELS=("gpt-4o")
 # Tutti i modelli da testare
 MODELS=("${OLLAMA_MODELS[@]}" "${AZURE_MODELS[@]}")
 TEMPLATES=(1 2 3 4 5)
