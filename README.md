@@ -48,7 +48,7 @@ docker compose run rag-app evaluation <dataset> [options]
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `<dataset>` | (required) | Path to JSON file with questions (e.g., `/app/benchmark_dataset.json`) |
-| `--llm <model>` | `llama3.2` | LLM model to use (Ollama: `qwen2.5:7b`, `gemma2:2b` / Azure: `gpt-5-mini`, `gpt-4o`) |
+| `--llm <model>` | `llama3.2` | LLM model to use (Ollama: `qwen2.5:7b`, `gemma2:2b` / Azure: `gpt-4o`) |
 | `--template-id <1-5>` | All (1-5) | Prompt template ID. If not specified, runs all 5 templates |
 | `--open-knowledge` | No | If present, allows the LLM to use external knowledge |
 | `--seed <n>` | `0` | Seed for reproducibility |
