@@ -126,6 +126,18 @@ RAG System Project/
 └── requirements.txt
 ```
 
+The following table summarises the main components and their responsibilities.
+
+| Component | Module | Role |
+|-----------|--------|------|
+| PDF Preprocessing | `ingestion.py` | Text and metadata extraction from PDF files |
+| Embedding & Indexing | `embeddings.py` | Chunk creation, vector encoding, Qdrant upsert |
+| Retrieval | `retrieval.py` | Semantic similarity search over indexed chunks |
+| Generation | `llm.py` | Prompt construction and LLM invocation |
+| Evaluation | `evaluation.py` | Automated benchmarking and CSV export |
+| Configuration | `config.py` | Centralised parameters (model, chunk size, top-k, endpoints) |
+| Orchestration | `docker-compose.yml` | Container management for Qdrant, Ollama, and the application |
+
 ## Evaluation Output
 
 Results are saved in two CSV files:
